@@ -2,130 +2,45 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreateTaskRequest;
+use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 class TasksController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): JsonResource
     {
         $tasks = Task::All();
-        $result = [];
-        if (!empty($tasks)) {
-            foreach ($tasks as $task) {
-                $result[] = [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'description' => $task->description,
-                    'status' => $task->status,
-                ];
-            }
-        } else {
-            $result['error'] = 'Записи не найдены';
-        }
-
-        return response()->json($result);
+        return new JsonResource($tasks);
     }
 
-    public function show(Task $task): JsonResponse
+    public function show(Task $task): JsonResource
     {
-        if (!empty($task->id)) {
-            $result = [
-                'id' => $task->id,
-                'title' => $task->title,
-                'description' => $task->description,
-                'status' => $task->status,
-            ];
-        } else {
-            $result = [];
-        }
-        return response()->json($result);
+        return new JsonResource($task);
     }
 
-    public function store(): JsonResponse
+    public function store(CreateTaskRequest $request): Response
     {
-        $validatorResult = Validator::make(request()->all(), [
-            'title' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'description' => [
-                'string',
-                'nullable',
-            ],
-            'status' => [
-                'required',
-                'string',
-                'max:255',
-            ]
-        ]);
-        $messages = $validatorResult->getMessageBag()->messages();
-        if (!empty($messages)) {
-            $result['errors'] = $messages;
-        } else {
-            $data = $validatorResult->getData();
-            $task = Task::create($data);
-            if (isset($task->id)) {
-                $result = [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'description' => $task->description,
-                    'status' => $task->status,
-                ];
-            } else {
-                $result = [
-                    'errors' => 'Ошибка выполнения запроса',
-                ];
-            }
-        }
-        return response()->json($result);
+        $data = $request->validated();
+        $task = Task::create($data);
+
+        return response(new JsonResource($task), 201);
     }
 
 
-    public function update(Task $task): JsonResponse
+    public function update(UpdateTaskRequest $request, Task $task): JsonResource
     {
-        $validatorResult = Validator::make(request()->all(), [
-            'title' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'description' => [
-                'string',
-                'nullable',
-            ],
-            'status' => [
-                'required',
-                'string',
-                'max:255',
-            ]
-        ]);
-        $messages = $validatorResult->getMessageBag()->messages();
-        if (!empty($messages)) {
-            $result['errors'] = $messages;
-        } else {
-            $data = $validatorResult->getData();
-            $task->update($data);
+        $data = $request->validated();
+        $task->update($data);
 
-            if (!empty($task->id)) {
-                $result = [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'description' => $task->description,
-                    'status' => $task->status,
-                ];
-            } else {
-                $result = [];
-            }
-        }
-        return response()->json($result);
+        return new JsonResource($task);
     }
 
-    public function destroy(Task $task): JsonResponse
+    public function destroy(Task $task): Response
     {
         $task->delete();
-        return response()->json(['status' => 'success']);
+        return response('', 204);
     }
 }
